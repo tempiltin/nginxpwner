@@ -1,10 +1,12 @@
+
+
 # Nginxpwner
 
 <p align="center"><img src="https://i.postimg.cc/vm3LWFj4/nginxpwner.png" /></p>
 
-Nginxpwner is a simple tool to look for common Nginx misconfigurations and vulnerabilities.
+**Nginxpwner** — bu oddiy vosita bo‘lib, keng tarqalgan **Nginx noto‘g‘ri sozlamalari** va **zaifliklarini** aniqlash uchun ishlatiladi.
 
-## Install:
+## O‘rnatish:
 
 ```
 cd /opt
@@ -14,66 +16,61 @@ chmod +x install.sh
 ./install.sh
 ```
 
-## Install using Docker
+## Docker orqali o‘rnatish:
 ```
 git clone https://github.com/stark0de/nginxpwner
 cd nginxpwner
 sudo docker build -t nginxpwner:latest .
 ```
 
-Run the image
+Docker tasvirini ishga tushirish:
 ```
 sudo docker run -it nginxpwner:latest /bin/bash
 ```
 
-
-## Usage:
+## Foydalanish:
 
 ```
-Target tab in Burp, select host, right click, copy all URLs in this host, copy to a file
+Burp’dagi Target tab’iga o‘ting, hostni tanlang, sichqonchaning o‘ng tugmasini bosing, “copy all URLs in this host” ni tanlang, faylga saqlang.
 
 cat urllist | unfurl paths | cut -d"/" -f2-3 | sort -u > /tmp/pathlist 
 
-Or get the list of paths you already discovered in the application in some other way. Note: the paths should not start with /
+Yoki dasturdan allaqachon aniqlagan path (yo‘llar) ro‘yxatini boshqa bir usulda oling. Eslatma: path’lar / belgisi bilan boshlanmasligi kerak.
 
-Finally:
+Va nihoyat:
 
 python3 nginxpwner.py https://example.com /tmp/pathlist
 ```
-## Notes:
 
-It actually checks for:
+## Izohlar:
 
--Gets Ngnix version and gets its possible exploits using searchsploit and tells if it is outdated
+Aslida quyidagilarni tekshiradi:
 
--Throws a wordlist specific to Nginx via gobuster
+- Nginx versiyasini aniqlaydi va `searchsploit` orqali mavjud eksploitlarni topadi hamda versiya eskirganmi yoki yo‘qmi, shuni bildiradi  
+- Nginx uchun maxsus wordlist yordamida **gobuster** orqali fuzzer qiladi  
+- `$uri` ni redirect’da noto‘g‘ri ishlatish orqali yuzaga keluvchi **CRLF zaifligini** tekshiradi  
+- Berilgan barcha path’larda CRLF zaifligini tekshiradi  
+- **PURGE HTTP** metodi tashqi foydalanuvchi uchun ochiqmi, shuni aniqlaydi  
+- O‘zgaruvchi (variable) sizib chiqishiga sabab bo‘ladigan noto‘g‘ri sozlamalarni tekshiradi  
+- `merge_slashes off` sozlamasi orqali yuzaga keladigan **path traversal** zaifligini tekshiradi  
+- Hop-by-hop header (masalan, `X-Forwarded-Host`) lar bilan yuborilgan so‘rovlar javobi uzunligidagi farqlarni tekshiradi  
+- **Kyubi** vositasidan foydalanib, noto‘g‘ri `alias` orqali yuzaga keladigan path traversal’ni aniqlaydi  
+- `X-Accel-Redirect` orqali 401/403 statusli sahifalarni chetlab o‘tishni sinovdan o‘tkazadi  
+- Raw backend javoblarini noto‘g‘ri o‘qish muammosi uchun payloadni ko‘rsatadi  
+- Sayt PHP ishlatadimi — tekshiradi va PHP saytlar uchun Nginx’ga xos testlarni tavsiya qiladi  
+- Nginx’ning `range` filter modulida mavjud bo‘lgan keng tarqalgan **butun sonlar toshishi (integer overflow)** zaifligini (CVE-2017-7529) tekshiradi
 
--Checks if it is vulnerable to CRLF via a common misconfiguration of using $uri in redirects
+Ushbu vosita javoblardagi `Server` sarlavhasidan foydalanadi. Biroq ba’zi CMS yoki Nginx asosida qurilgan tizimlar (masalan: Centminmod, OpenResty, Pantheon yoki Tengine) bu header’ni yubormaydi. Bunday hollarda `nginx-pwner-no-server-header.py` skriptidan foydalaning (shu bilan bir xil parametrlar bilan).
 
--Checks for CRLF in all of the paths provided
+Ekspluat qidiruvi to‘g‘ri ishlashi uchun vaqti-vaqti bilan Kali Linux’da quyidagini bajaring:
 
--Checks if the PURGE HTTP method is available from the outside
+```
+searchsploit -u
+```
 
--Checks for variable leakage misconfiguration
+Ushbu vosita **web cache poisoning/deception** yoki **request smuggling** zaifliklarini aniqlamaydi — bularni tekshirish uchun boshqa maxsus vositalardan foydalaning. **NginxPwner** asosan `nginx.conf` faylida ishlab chiquvchi bilmagan holda qilgan **noto‘g‘ri sozlamalarni** aniqlashga qaratilgan.
 
--Checks for path traversal vulnerabilities via merge_slashes set to off
+**Kyubi** vositasi uchun @shibli2700 ga, shuningdek **Gobuster** mualliflariga va **Detectify** jamoasiga (ular NGINX’dagi ko‘plab noto‘g‘ri sozlamalarni aniqlaganlar) rahmat.
 
--Tests for differences in the length of responses when using hop-by-hop headers (ex: X-Forwarded-Host)
-
--Uses Kyubi to test for path traversal vulnerabilities via misconfigured alias
-
--Tests for 401/403 bypass using X-Accel-Redirect
-
--Shows the payload to check for Raw backend reading response misconfiguration 
-
--Checks if the site uses PHP and suggests some nginx-specific tests for PHP sites
-
--Tests for the common integer overflow vulnerability in Nginx's range filter module (CVE-2017-7529)
-
-The tool uses the Server header in the response to do some of the tests. There are other CMS and so which are built on Nginx like Centminmod, OpenResty, Pantheon or Tengine for example which don't return that header. In that case please use nginx-pwner-no-server-header.py with the same parameters than the other script
-
-Also, for the exploit search to run correctly you should do: searchsploit -u in Kali from time to time
-
-The tool does not check for web cache poisoning/deception vulnerabilities nor request smuggling, you should test that with specific tools for those vulnerabilities. NginxPwner is mainly focused in misconfigurations developers may have introduced in the nginx.conf without being aware of them.
-
-Credit to shibli2700 for his awesome tool Kyubi https://github.com/shibli2700/Kyubi and to all the contributors of gobuster. Credits also to Detectify (which actually discovered many of this misconfigurations in NGINX)
+---
+tugadi!
